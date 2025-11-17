@@ -1,0 +1,14 @@
+# Created by venv; see https://docs.python.org/3/library/venv.html
+phillips_ml_env/
+__pycache__/
+*.pyc
+.DS_Store
+.jupyter/
+.ipynb_checkpoints/
+data/raw/
+data/processed/
+.env
+phillips_ml_env/
+__pycache__/
+*.pyc
+

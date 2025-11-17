@@ -9,6 +9,3 @@ data/raw/
 data/processed/
 .env
 phillips_ml_env/
-__pycache__/
-*.pyc
-

@@ -1,0 +1,19 @@
+name: phillips-ml-project
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - python=3.11
+  - pandas=2.2.3
+  - numpy=2.3.4
+  - scikit-learn=1.5.2
+  - matplotlib=3.10.7
+  - seaborn=0.13.2
+  - plotly=5.24.1
+  - xgboost=3.1.1
+  - fredapi=0.5.2
+  - python-dotenv=1.0.1
+  - jupyter=1.1.1
+  - pip
+  - pip:
+    - kaleido

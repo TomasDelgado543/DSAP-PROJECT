@@ -1,14 +1,48 @@
-# Created by venv; see https://docs.python.org/3/library/venv.html
+# Virtual environments
 phillips_ml_env/
+.venv/
+venv/
+ENV/
+env/
+*.egg-info/
+
+# Python cache
 __pycache__/
-*.pyc
-.DS_Store
-.jupyter/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Jupyter
 .ipynb_checkpoints/
-data/raw/
-data/processed/
+*.ipynb_checkpoints
+
+# Environment files
 .env
-phillips_ml_env/
-__pycache__/
-*.pyc
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Data
+data/raw/*.csv
+data/processed/*.csv
+
+
+# Compiled documents
+*.aux
+*.log
+*.out
+*.toc
+
+
 

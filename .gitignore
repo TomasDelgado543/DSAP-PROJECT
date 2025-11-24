@@ -33,16 +33,3 @@ __pycache__/
 Thumbs.db
 desktop.ini
 
-# Data
-data/raw/*.csv
-data/processed/*.csv
-
-
-# Compiled documents
-*.aux
-*.log
-*.out
-*.toc
-
-
-

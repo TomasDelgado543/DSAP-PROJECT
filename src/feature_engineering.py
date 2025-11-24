@@ -28,6 +28,7 @@ class FeatureEngineer:
     def create_lagged_features(self, df: pd.DataFrame, columns: list, lags: list = None) -> pd.DataFrame:
         """
         Create lagged features for specified columns.
+        FIX: Properly handle index alignment per country.
         
         Parameters:
         -----------
@@ -55,10 +56,18 @@ class FeatureEngineer:
             for col in columns:
                 for lag in lags:
                     lag_col_name = f"{col}_lag_{lag}"
-                    # Create lag within each country group
-                    df.loc[country_mask, lag_col_name] = df.loc[country_mask, col].shift(lag)
+                    
+                    # Get the country's data
+                    country_data = df.loc[country_mask, col]
+                    
+                    # Shift it
+                    shifted_data = country_data.shift(lag)
+                    
+                    # Assign back using proper index
+                    df.loc[country_mask, lag_col_name] = shifted_data.values
         
         return df
+
     
     def create_target_variable(self, df: pd.DataFrame, target_col: str = 'inflation', 
                               forecast_horizon: int = 1) -> pd.DataFrame:
@@ -120,10 +129,30 @@ class FeatureEngineer:
         
         return df
     
+    def create_regime_features(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Add COVID regime indicator.
+        
+        Parameters:
+        -----------
+        df : pd.DataFrame
+            Input dataframe with date column
+        
+        Returns:
+        --------
+        pd.DataFrame
+            DataFrame with regime features added
+        """
+        df = df.copy()
+        df['post_covid'] = (df['date'] >= '2020-03-01').astype(int)
+        df['years_since_covid'] = (df['date'] - pd.Timestamp('2020-03-01')).dt.days / 365.25
+        df['years_since_covid'] = df['years_since_covid'].clip(lower=0)
+        return df
+    
     def engineer_features(self, df: pd.DataFrame, target_col: str = 'inflation',
                          forecast_horizon: int = 1) -> pd.DataFrame:
         """
-        Complete feature engineering pipeline.
+        Complete feature engineering pipeline with detailed row tracking.
         
         Parameters:
         -----------
@@ -140,11 +169,17 @@ class FeatureEngineer:
             Feature-engineered dataset ready for ML
         """
         print("="*70)
-        print("FEATURE ENGINEERING")
+        print("FEATURE ENGINEERING (WITH ROW TRACKING)")
         print("="*70)
         
         # Sort by country and date
         df = df.sort_values(['country', 'date']).reset_index(drop=True)
+        
+        # TRACKING: Start
+        print("\n[TRACKING] Starting rows:")
+        for country in sorted(df['country'].unique()):
+            c_data = df[df['country'] == country]
+            print(f"  {country}: {len(c_data)} rows, date range {c_data['date'].min().date()} to {c_data['date'].max().date()}")
         
         print("\n✓ Creating lagged features...")
         print(f"  Lag periods: {self.lags} months")
@@ -158,11 +193,25 @@ class FeatureEngineer:
         
         print(f"  Created {len(self.lags) * 3} lagged features")
         
+        # TRACKING: After lags
+        print("\n[TRACKING] After lag creation (before dropna):")
+        for country in sorted(df['country'].unique()):
+            c_data = df[df['country'] == country]
+            nan_count = c_data[['unemployment_lag_12', 'inflation_lag_12', 'policy_rate_lag_12']].isna().any(axis=1).sum()
+            print(f"  {country}: {len(c_data)} rows, {nan_count} rows with NaN in 12-month lags")
+        
         print("\n✓ Creating target variable...")
         print(f"  Target: {target_col}_t+{forecast_horizon} (predict {forecast_horizon} month(s) ahead)")
         
         df = self.create_target_variable(df, target_col=target_col, 
                                         forecast_horizon=forecast_horizon)
+        
+        # TRACKING: After target
+        print("\n[TRACKING] After target creation (before dropna):")
+        for country in sorted(df['country'].unique()):
+            c_data = df[df['country'] == country]
+            nan_count = c_data[f'{target_col}_t+{forecast_horizon}'].isna().sum()
+            print(f"  {country}: {len(c_data)} rows, {nan_count} rows with NaN in target")
         
         print("\n✓ Creating policy change features...")
         df = self.create_policy_change_features(df)
@@ -171,16 +220,42 @@ class FeatureEngineer:
         print("  - is_tightening (binary: rate increased)")
         print("  - is_easing (binary: rate decreased)")
         
+        # TRACKING: After policy features
+        print("\n[TRACKING] After policy features (before dropna):")
+        for country in sorted(df['country'].unique()):
+            c_data = df[df['country'] == country]
+            nan_count = c_data[['policy_rate_change', 'policy_rate_12m_change']].isna().any(axis=1).sum()
+            print(f"  {country}: {len(c_data)} rows, {nan_count} rows with NaN in policy features")
+        
+        print("\n✓ Creating regime indicator features...")
+        df = self.create_regime_features(df)
+        print("  - post_covid (binary: 1 if date >= 2020-03-01, 0 otherwise)")
+        print("  - years_since_covid (continuous: years elapsed since COVID start)")
+        
         # Remove rows with NaN values created by lags/target
         print("\n✓ Removing rows with missing values from lags/target...")
         rows_before = len(df)
+        
+        # TRACKING: Before dropna (detailed)
+        print(f"\n[TRACKING] Complete rows per country (before dropna):")
+        for country in sorted(df['country'].unique()):
+            c_data = df[df['country'] == country]
+            complete_rows = c_data.dropna()
+            print(f"  {country}: {len(c_data)} total → {len(complete_rows)} complete ({len(c_data) - len(complete_rows)} will be dropped)")
+        
         df = df.dropna()
         rows_after = len(df)
         rows_removed = rows_before - rows_after
         
-        print(f"  Rows before: {rows_before}")
-        print(f"  Rows after: {rows_after}")
+        print(f"  Rows before dropna: {rows_before}")
+        print(f"  Rows after dropna: {rows_after}")
         print(f"  Rows removed: {rows_removed}")
+        
+        # TRACKING: After dropna (final)
+        print(f"\n[TRACKING] FINAL rows per country:")
+        for country in sorted(df['country'].unique()):
+            c_data = df[df['country'] == country]
+            print(f"  {country}: {len(c_data)} rows, date range {c_data['date'].min().date()} to {c_data['date'].max().date()}")
         
         # Summary statistics
         print("\n" + "-"*70)

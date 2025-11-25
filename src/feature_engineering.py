@@ -150,23 +150,10 @@ class FeatureEngineer:
         return df
     
     def engineer_features(self, df: pd.DataFrame, target_col: str = 'inflation',
-                         forecast_horizon: int = 1) -> pd.DataFrame:
+                     forecast_horizon: int = 1) -> pd.DataFrame:
         """
-        Complete feature engineering pipeline with detailed row tracking.
-        
-        Parameters:
-        -----------
-        df : pd.DataFrame
-            Raw processed data
-        target_col : str
-            Column to predict (default: 'inflation')
-        forecast_horizon : int
-            Months ahead to predict (default: 1)
-        
-        Returns:
-        --------
-        pd.DataFrame
-            Feature-engineered dataset ready for ML
+        Complete feature engineering pipeline with row tracking.
+        IMPORTANT: Keeps latest observation even if target is NaN (for prediction).
         """
         print("="*70)
         print("FEATURE ENGINEERING (WITH ROW TRACKING)")
@@ -233,17 +220,21 @@ class FeatureEngineer:
         print("  - years_since_covid (continuous: years elapsed since COVID start)")
         
         # Remove rows with NaN values created by lags/target
-        print("\n✓ Removing rows with missing values from lags/target...")
+        print("\n✓ Removing rows with missing values from lags...")
         rows_before = len(df)
         
         # TRACKING: Before dropna (detailed)
         print(f"\n[TRACKING] Complete rows per country (before dropna):")
         for country in sorted(df['country'].unique()):
             c_data = df[df['country'] == country]
-            complete_rows = c_data.dropna()
-            print(f"  {country}: {len(c_data)} total → {len(complete_rows)} complete ({len(c_data) - len(complete_rows)} will be dropped)")
+            complete = c_data.dropna()
+            print(f"  {country}: {len(c_data)} total → {len(complete)} complete ({len(c_data) - len(complete)} will be dropped)")
         
-        df = df.dropna()
+        # IMPORTANT: Only drop rows with missing FEATURES, keep rows with missing target
+        # This preserves the latest month (March 2025) for prediction even though it has no target
+        feature_cols_to_check = ['unemployment_lag_1', 'inflation_lag_1', 'policy_rate_lag_1']
+        
+        df = df.dropna(subset=feature_cols_to_check)
         rows_after = len(df)
         rows_removed = rows_before - rows_after
         
@@ -255,7 +246,10 @@ class FeatureEngineer:
         print(f"\n[TRACKING] FINAL rows per country:")
         for country in sorted(df['country'].unique()):
             c_data = df[df['country'] == country]
-            print(f"  {country}: {len(c_data)} rows, date range {c_data['date'].min().date()} to {c_data['date'].max().date()}")
+            n_with_target = c_data[f'{target_col}_t+{forecast_horizon}'].notna().sum()
+            n_without_target = c_data[f'{target_col}_t+{forecast_horizon}'].isna().sum()
+            print(f"  {country}: {len(c_data)} rows total ({n_with_target} with target, {n_without_target} for prediction)")
+            print(f"    Date range: {c_data['date'].min().date()} to {c_data['date'].max().date()}")
         
         # Summary statistics
         print("\n" + "-"*70)
@@ -265,7 +259,7 @@ class FeatureEngineer:
         # Get feature columns (everything except date, country, original target)
         original_cols = ['date', 'country', 'unemployment', 'inflation', 'policy_rate']
         feature_cols = [col for col in df.columns if col not in original_cols 
-                       and col != f'{target_col}_t+{forecast_horizon}']
+                    and col != f'{target_col}_t+{forecast_horizon}']
         
         print(f"\nFeatures ({len(feature_cols)} total):")
         for i, col in enumerate(feature_cols, 1):
@@ -275,11 +269,12 @@ class FeatureEngineer:
         
         print(f"\nDataset shape: {df.shape[0]} rows × {df.shape[1]} columns")
         print(f"Countries: {sorted(df['country'].unique())}")
+        print(f"⚠️  Note: Latest row per country has NaN target (for April 2025 prediction)")
         
         print("="*70 + "\n")
         
         return df
-    
+     
     def get_feature_columns(self, df: pd.DataFrame, target_col: str = 'inflation',
                            forecast_horizon: int = 1) -> tuple:
         """
@@ -311,6 +306,7 @@ class FeatureEngineer:
 def main():
     """
     Main execution: load processed data and engineer features.
+    SEPARATES training and prediction data.
     """
     print("\n" + "="*70)
     print("PHILLIPS CURVE ML PROJECT - FEATURE ENGINEERING")
@@ -338,18 +334,52 @@ def main():
     # Run feature engineering
     df_engineered = engineer.engineer_features(df, target_col='inflation', forecast_horizon=1)
     
-    # Save engineered features
-    output_path = os.path.join('data', 'processed', 'engineered_features.csv')
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    df_engineered.to_csv(output_path, index=False)
-    print(f"✓ Engineered features saved to: {output_path}")
+    # SEPARATE TRAINING AND PREDICTION DATA
+    print("\n" + "="*70)
+    print("SEPARATING TRAINING AND PREDICTION DATA")
+    print("="*70 + "\n")
+    
+    # Training data: has valid targets
+    df_train = df_engineered.dropna(subset=['inflation_t+1']).copy()
+    
+    # Prediction data: missing targets (March 2025 for April prediction)
+    df_predict = df_engineered[df_engineered['inflation_t+1'].isna()].copy()
+    
+    print(f"Training data (with targets): {len(df_train)} rows")
+    for country in sorted(df_train['country'].unique()):
+        c_data = df_train[df_train['country'] == country]
+        print(f"  {country}: {len(c_data)} rows, {c_data['date'].min().date()} to {c_data['date'].max().date()}")
+    
+    print(f"\nPrediction data (NO targets, for April forecast): {len(df_predict)} rows")
+    for country in sorted(df_predict['country'].unique()):
+        c_data = df_predict[df_predict['country'] == country]
+        if len(c_data) > 0:
+            print(f"  {country}: {len(c_data)} rows, {c_data['date'].min().date()} to {c_data['date'].max().date()}")
+    
+    # Save training data
+    output_path_train = os.path.join('data', 'processed', 'engineered_features_train.csv')
+    os.makedirs(os.path.dirname(output_path_train), exist_ok=True)
+    df_train.to_csv(output_path_train, index=False)
+    print(f"\n✓ Training data saved to: engineered_features_train.csv")
+    
+    # Save prediction data
+    if len(df_predict) > 0:
+        output_path_predict = os.path.join('data', 'processed', 'engineered_features_predict.csv')
+        df_predict.to_csv(output_path_predict, index=False)
+        print(f"✓ Prediction data saved to: engineered_features_predict.csv")
+    
+    # Save full dataset for reference
+    output_path_full = os.path.join('data', 'processed', 'engineered_features.csv')
+    df_engineered.to_csv(output_path_full, index=False)
+    print(f"✓ Full dataset saved to: engineered_features.csv")
     
     # Get feature and target column names
     feature_cols, target_col = engineer.get_feature_columns(df_engineered)
     
     print(f"\n✓ Ready for ML modeling!")
     print(f"  Features: {len(feature_cols)}")
-    print(f"  Samples: {len(df_engineered)}")
+    print(f"  Training samples: {len(df_train)}")
+    print(f"  Prediction samples: {len(df_predict)}")
     
     print("\n" + "="*70)
     print("Next step: Run models.py to train ML models")

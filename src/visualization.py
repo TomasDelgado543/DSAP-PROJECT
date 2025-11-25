@@ -321,7 +321,7 @@ class CountryComparisonVisualizer:
         
         return output_path
     
-    def create_interactive_country_comparison(self) -> str:
+    # def create_interactive_country_comparison(self) -> str:
         """
         Create interactive Plotly chart for country comparison.
         
@@ -402,7 +402,7 @@ class CountryComparisonVisualizer:
         self.plot_best_model_by_country()
         self.plot_inflation_regimes()
         self.plot_predictability_comparison()
-        self.create_interactive_country_comparison()
+        # self.create_interactive_country_comparison()
         
         print("\n" + "="*70)
         print(f"All visualizations saved to: {self.output_dir}")
@@ -433,7 +433,7 @@ def main():
     print("  - 02_best_model_by_country.png (winner highlight)")
     print("  - 03_inflation_regimes.png (pre/post COVID)")
     print("  - 04_predictability_scatter.png (R² analysis)")
-    print("  - 05_interactive_country_comparison.html (interactive demo)")
+    # print("  - 05_interactive_country_comparison.html (interactive demo)")
     print("\n")
 
 

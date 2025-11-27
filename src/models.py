@@ -171,7 +171,7 @@ class CountryComparison:
             y_country = y_country[valid_target_mask].reset_index(drop=True)
             dates_country = dates_country[valid_target_mask].reset_index(drop=True)
             
-            # ⚠️ ADD THIS: Also drop rows with NaN features
+            # Drop rows with NaN features
             valid_features_mask = ~X_country.isna().any(axis=1)
             
             X_country = X_country[valid_features_mask].reset_index(drop=True)
@@ -250,7 +250,7 @@ class CountryComparison:
                 
                 print(f"    {model_name:15s}: MAE={metrics['mae']:7.2f}, RMSE={metrics['rmse']:7.2f}, R²={metrics['r2']:7.4f}, Dir.Acc={metrics['direction_accuracy']:5.1f}%")
                 
-                # Track best model
+                # Track best model (based on mae)
                 if metrics['mae'] < best_mae:
                     best_mae = metrics['mae']
                     best_model_name = model_name
@@ -319,7 +319,7 @@ class CountryComparison:
                 final_model = xgb.XGBRegressor(n_estimators=100, max_depth=5, 
                                             random_state=self.random_state, verbosity=0)
             
-            # Train on ALL valid data
+            # Train on valid data
             final_model.fit(X_train_full, y_train_full)
             
             print(f"\n✓ {country} - Final {best_model_name} trained on {len(X_train_full)} observations")

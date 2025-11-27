@@ -35,12 +35,12 @@ class FREDDataCollector:
         self.series_ids = {
             'US': {
                 'unemployment': 'UNRATE',              # Unemployment Rate (%)
-                'inflation': 'CPALTT01USM659N',        # CPI YoY inflation (ALREADY %)
+                'inflation': 'CPALTT01USM659N',        # CPI YoY inflation (%)
                 'policy_rate': 'FEDFUNDS'              # Federal Funds Effective Rate (%)
             },
             'UK': {
                 'unemployment': 'LRHUTTTTGBM156S',     # Unemployment Rate Total (%)
-                'inflation': 'GBRCPALTT01CTGYM',       # CPI YoY inflation (ALREADY %)
+                'inflation': 'GBRCPALTT01CTGYM',       # CPI YoY inflation (%)
                 'policy_rate': 'IRSTCI01GBM156N'       # Bank Rate - Immediate Rates (%)
             }
         }

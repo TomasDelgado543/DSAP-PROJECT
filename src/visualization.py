@@ -1,6 +1,6 @@
 """
-Visualization module for Phillips Curve ML project - Country Comparison Edition.
-Creates publication-quality charts comparing US vs UK model performance.
+Visualization module for Phillips Curve ML project - Country Comparison.
+Creates charts comparing model performance across UK and US.
 """
 
 import pandas as pd
@@ -44,8 +44,8 @@ class CountryComparisonVisualizer:
         
         # Color scheme
         self.colors = {
-            'UK': '#1f77b4',  # Blue
-            'US': '#ff7f0e'   # Orange
+            'UK': "#287cb8",  # UK Blue
+            'US': "#ff0101"   # US Red
         }
     
     def plot_model_comparison_by_country(self) -> str:

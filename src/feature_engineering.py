@@ -156,14 +156,14 @@ class FeatureEngineer:
         IMPORTANT: Keeps latest observation even if target is NaN (for prediction).
         """
         print("="*70)
-        print("FEATURE ENGINEERING (WITH ROW TRACKING)")
+        print("FEATURE ENGINEERING")
         print("="*70)
         
         # Sort by country and date
         df = df.sort_values(['country', 'date']).reset_index(drop=True)
         
-        # TRACKING: Start
-        print("\n[TRACKING] Starting rows:")
+        # Start
+        print("\nStarting rows:")
         for country in sorted(df['country'].unique()):
             c_data = df[df['country'] == country]
             print(f"  {country}: {len(c_data)} rows, date range {c_data['date'].min().date()} to {c_data['date'].max().date()}")
@@ -180,8 +180,8 @@ class FeatureEngineer:
         
         print(f"  Created {len(self.lags) * 3} lagged features")
         
-        # TRACKING: After lags
-        print("\n[TRACKING] After lag creation (before dropna):")
+        # After lags
+        print("\nAfter lag creation (before dropna):")
         for country in sorted(df['country'].unique()):
             c_data = df[df['country'] == country]
             nan_count = c_data[['unemployment_lag_12', 'inflation_lag_12', 'policy_rate_lag_12']].isna().any(axis=1).sum()
@@ -193,8 +193,8 @@ class FeatureEngineer:
         df = self.create_target_variable(df, target_col=target_col, 
                                         forecast_horizon=forecast_horizon)
         
-        # TRACKING: After target
-        print("\n[TRACKING] After target creation (before dropna):")
+        # After target
+        print("\n After target creation (before dropna):")
         for country in sorted(df['country'].unique()):
             c_data = df[df['country'] == country]
             nan_count = c_data[f'{target_col}_t+{forecast_horizon}'].isna().sum()
@@ -207,8 +207,8 @@ class FeatureEngineer:
         print("  - is_tightening (binary: rate increased)")
         print("  - is_easing (binary: rate decreased)")
         
-        # TRACKING: After policy features
-        print("\n[TRACKING] After policy features (before dropna):")
+        # After policy features
+        print("\n After policy features (before dropna):")
         for country in sorted(df['country'].unique()):
             c_data = df[df['country'] == country]
             nan_count = c_data[['policy_rate_change', 'policy_rate_12m_change']].isna().any(axis=1).sum()
@@ -223,14 +223,14 @@ class FeatureEngineer:
         print("\n✓ Removing rows with missing values from lags...")
         rows_before = len(df)
         
-        # TRACKING: Before dropna (detailed)
-        print(f"\n[TRACKING] Complete rows per country (before dropna):")
+        # Before dropna (detailed)
+        print(f"\n Complete rows per country (before dropna):")
         for country in sorted(df['country'].unique()):
             c_data = df[df['country'] == country]
             complete = c_data.dropna()
             print(f"  {country}: {len(c_data)} total → {len(complete)} complete ({len(c_data) - len(complete)} will be dropped)")
         
-        # IMPORTANT: Only drop rows with missing FEATURES, keep rows with missing target
+        # Only drop rows with missing FEATURES, keep rows with missing target
         # This preserves the latest month (March 2025) for prediction even though it has no target
         feature_cols_to_check = ['unemployment_lag_1', 'inflation_lag_1', 'policy_rate_lag_1']
         
@@ -242,8 +242,8 @@ class FeatureEngineer:
         print(f"  Rows after dropna: {rows_after}")
         print(f"  Rows removed: {rows_removed}")
         
-        # TRACKING: After dropna (final)
-        print(f"\n[TRACKING] FINAL rows per country:")
+        # After dropna (final)
+        print(f"\nFINAL rows per country:")
         for country in sorted(df['country'].unique()):
             c_data = df[df['country'] == country]
             n_with_target = c_data[f'{target_col}_t+{forecast_horizon}'].notna().sum()

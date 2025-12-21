@@ -1,6 +1,6 @@
 # Phillips Curve ML Project
 
-Comparing ML model performance for inflation forecasting: UK vs US (2015-2025)
+Phillips Curve Inflation Forecasting: Machine Learning vs. Econometrics
 
 ## Setup
 
@@ -27,7 +27,7 @@ Accuracy comparison between the models in each economy
 
 ## Project Structure
 
-├── main.py # Entry point
+├── main.py                     # Entry point
 ├── environment.yml             # Conda dependencies
 ├── requirements.txt            # Pip dependencies
 ├── src/                        # Source code
@@ -46,7 +46,7 @@ Accuracy comparison between the models in each economy
 - US: Tree models best (XGBoost R²=0.75)
 - Policy framework affects model performance
 
-See `project_report.pdf` for full analysis.
+See `Final Project - Tomas Delgado.pdf` for full analysis.
 
 ## Author
 Tomás Delgado

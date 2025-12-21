@@ -23,8 +23,8 @@ class CountryComparisonVisualizer:
     Create visualizations comparing ML model performance across countries.
     """
     
-    def __init__(self, results_dir: str = 'data/results', 
-                 output_dir: str = 'data/results/visualizations'):
+    def __init__(self, results_dir: str = 'results', 
+                 output_dir: str = 'results/visualizations'):
         """
         Initialize visualizer.
         
@@ -415,7 +415,7 @@ def main():
     print("PHILLIPS CURVE ML - COUNTRY COMPARISON VISUALIZATIONS")
     print("="*70 + "\n")
     
-    results_dir = os.path.join('data', 'results')
+    results_dir = os.path.join('results')
     
     if not os.path.exists(os.path.join(results_dir, 'country_comparison_results.csv')):
         raise FileNotFoundError(

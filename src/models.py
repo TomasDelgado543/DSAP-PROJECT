@@ -491,7 +491,7 @@ def main():
     comparison.train_final_models(X, y, countries, dates, features)
     
     # Save CV results
-    output_dir = os.path.join('data', 'results')
+    output_dir = os.path.join('results')
     os.makedirs(output_dir, exist_ok=True)
     df_results.to_csv(os.path.join(output_dir, 'country_comparison_results.csv'), index=False)
     

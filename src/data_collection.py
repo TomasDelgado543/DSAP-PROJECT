@@ -1,147 +1,113 @@
 """
 Data collection module for Phillips Curve ML project.
-Fetches economic data from FRED API for multiple countries (2015-2025).
+Loads pre-downloaded data from CSV files instead of FRED API.
+Teachers version to run the code without an API key.
 """
 
 import pandas as pd
-import numpy as np
-from fredapi import Fred
-from datetime import datetime
 import os
-from dotenv import load_dotenv
+from datetime import datetime
 import warnings
 
 warnings.filterwarnings('ignore')
 
 
-class FREDDataCollector:
+class LocalDataLoader:
     """
-    Collects economic data from FRED API for Phillips Curve analysis.
-    Handles 2015-2025 time period with proper data alignment.
+    Loads and aligns economic data from local CSV files.
+    No API key required - just raw data files.
     """
     
-    def __init__(self, api_key: str):
+    def __init__(self, raw_data_folder='data/raw'):
         """
-        Initialize FRED API connection.
+        Initialize loader.
         
         Parameters:
         -----------
-        api_key : str
-            Your FRED API key from https://fred.stlouisfed.org
+        raw_data_folder : str
+            Folder containing raw data CSV files
         """
-        self.fred = Fred(api_key=api_key)
-        
-        # Define series IDs for US and UK (2015-2025)
-        self.series_ids = {
-            'US': {
-                'unemployment': 'UNRATE',              # Unemployment Rate (%)
-                'inflation': 'CPALTT01USM659N',        # CPI YoY inflation (%)
-                'policy_rate': 'FEDFUNDS'              # Federal Funds Effective Rate (%)
-            },
-            'UK': {
-                'unemployment': 'LRHUTTTTGBM156S',     # Unemployment Rate Total (%)
-                'inflation': 'GBRCPALTT01CTGYM',       # CPI YoY inflation (%)
-                'policy_rate': 'IRSTCI01GBM156N'       # Bank Rate - Immediate Rates (%)
-            }
-        }
-        
-        self.countries = list(self.series_ids.keys())
+        self.raw_data_folder = raw_data_folder
+        self.countries = ['US', 'UK']
     
-    def fetch_series(self, series_id: str, start_date: str, end_date: str) -> pd.Series:
+    def load_country_data(self, filepath: str) -> pd.DataFrame:
         """
-        Fetch a single time series from FRED.
+        Load data from CSV file.
         
         Parameters:
         -----------
-        series_id : str
-            FRED series identifier
-        start_date : str
-            Start date in 'YYYY-MM-DD' format
-        end_date : str
-            End date in 'YYYY-MM-DD' format
-            
-        Returns:
-        --------
-        pd.Series
-            Time series data or empty Series if error
-        """
-        try:
-            data = self.fred.get_series(
-                series_id, 
-                observation_start=start_date,
-                observation_end=end_date
-            )
-            return data
-        except Exception as e:
-            print(f"  ⚠️  Error fetching {series_id}: {e}")
-            return pd.Series(dtype=float)
-    
-    def fetch_country_data(self, country: str, start_date: str, end_date: str) -> pd.DataFrame:
-        """
-        Fetch all economic indicators for a specific country.
-        
-        Parameters:
-        -----------
-        country : str
-            Country code ('US' or 'UK')
-        start_date : str
-            Start date in 'YYYY-MM-DD' format
-        end_date : str
-            End date in 'YYYY-MM-DD' format
+        filepath : str
+            Path to CSV file
             
         Returns:
         --------
         pd.DataFrame
-            DataFrame with all indicators for country
+            Loaded data
         """
-        if country not in self.series_ids:
-            raise ValueError(f"Country {country} not supported")
+        if not os.path.exists(filepath):
+            raise FileNotFoundError(f"Data file not found: {filepath}")
         
-        print(f"  Fetching {country} data...")
+        print(f"  Loading: {filepath}")
+        df = pd.read_csv(filepath)
         
-        series_dict = self.series_ids[country]
-        data = {}
-        
-        for indicator, series_id in series_dict.items():
-            print(f"    - {indicator} ({series_id})")
-            data[indicator] = self.fetch_series(series_id, start_date, end_date)
-        
-        df = pd.DataFrame(data)
-        df['country'] = country
+        # Ensure date column is datetime
+        if 'date' in df.columns:
+            df['date'] = pd.to_datetime(df['date'])
         
         return df
     
-    def fetch_all_countries(self, start_date: str = '2015-01-01', 
-                           end_date: str = None) -> pd.DataFrame:
+    def load_all_countries(self) -> pd.DataFrame:
         """
-        Fetch data for all countries and combine.
+        Load data for all countries from local CSV files.
         
-        Parameters:
-        -----------
-        start_date : str
-            Start date (default: 2015-01-01)
-        end_date : str, optional
-            End date (defaults to today)
-            
+        Expected file structure:
+        - data/raw/raw_data.csv (from FRED API download)
+        OR
+        - Individual CSV files with country data
+        
         Returns:
         --------
         pd.DataFrame
             Combined dataset with all countries
         """
-        if end_date is None:
-            end_date = datetime.now().strftime('%Y-%m-%d')
+        print(f"\nLoading local data from: {self.raw_data_folder}/")
         
-        print(f"\nFetching FRED data ({start_date} to {end_date})...")
+        # Try loading combined file first
+        combined_path = os.path.join(self.raw_data_folder, 'raw_data.csv')
+        
+        if os.path.exists(combined_path):
+            print(f"\n✓ Found combined data file: raw_data.csv")
+            df = self.load_country_data(combined_path)
+            
+            if 'date' in df.columns:
+                df['date'] = pd.to_datetime(df['date'])
+            
+            return df
+        
+        # Otherwise, try loading individual country files
+        print(f"⚠️  Combined file not found. Looking for individual country files...")
         
         all_data = []
         for country in self.countries:
-            country_df = self.fetch_country_data(country, start_date, end_date)
-            all_data.append(country_df)
+            country_file = os.path.join(self.raw_data_folder, f'{country.lower()}_data.csv')
+            
+            if os.path.exists(country_file):
+                print(f"\n  ✓ Found {country} file: {country_file}")
+                df_country = self.load_country_data(country_file)
+                df_country['country'] = country
+                all_data.append(df_country)
+            else:
+                print(f"  ⚠️  {country} file not found: {country_file}")
+        
+        if not all_data:
+            raise FileNotFoundError(
+                f"No data files found in {self.raw_data_folder}/\n"
+                f"Expected either:\n"
+                f"  - data/raw/raw_data.csv (combined), OR\n"
+                f"  - data/raw/us_data.csv + data/raw/uk_data.csv (individual)"
+            )
         
         combined_df = pd.concat(all_data, axis=0)
-        combined_df = combined_df.reset_index()
-        combined_df = combined_df.rename(columns={'index': 'date'})
-        
         return combined_df
     
     def clean_and_filter_data(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -153,6 +119,8 @@ class FREDDataCollector:
         print("DATA QUALITY ASSESSMENT & ALIGNMENT")
         print("="*70)
         
+        # Ensure proper data types
+        df['date'] = pd.to_datetime(df['date'])
         df = df.sort_values(['country', 'date']).reset_index(drop=True)
         
         # Step 1: Find data availability
@@ -164,11 +132,12 @@ class FREDDataCollector:
             print(f"\n{country}:")
             
             for col in ['unemployment', 'inflation', 'policy_rate']:
-                last_valid = country_data[country_data[col].notna()]['date'].max()
-                first_valid = country_data[country_data[col].notna()]['date'].min()
-                coverage = country_data[col].notna().sum() / len(country_data) * 100
-                
-                print(f"  {col:15s}: {first_valid.date()} to {last_valid.date()} ({coverage:.1f}% coverage)")
+                if col in country_data.columns:
+                    last_valid = country_data[country_data[col].notna()]['date'].max()
+                    first_valid = country_data[country_data[col].notna()]['date'].min()
+                    coverage = country_data[col].notna().sum() / len(country_data) * 100
+                    
+                    print(f"  {col:15s}: {first_valid.date()} to {last_valid.date()} ({coverage:.1f}% coverage)")
         
         # Step 2: Find common end date
         print("\n" + "-"*70)
@@ -211,33 +180,7 @@ class FREDDataCollector:
         
         return df_clean
     
-    def diagnose_missing_data(self, df: pd.DataFrame) -> None:
-        """
-        Show detailed missing data analysis before and after alignment.
-        """
-        print("\n" + "="*70)
-        print("DETAILED MISSING DATA ANALYSIS")
-        print("="*70)
-        
-        for country in sorted(df['country'].unique()):
-            country_data = df[df['country'] == country].sort_values('date')
-            
-            print(f"\n{country} ({len(country_data)} rows):")
-            print(f"  Date range: {country_data['date'].min().date()} to {country_data['date'].max().date()}")
-            
-            for col in ['unemployment', 'inflation', 'policy_rate']:
-                missing_mask = country_data[col].isna()
-                n_missing = missing_mask.sum()
-                
-                if n_missing > 0:
-                    missing_rows = country_data[missing_mask]
-                    print(f"\n  {col}: {n_missing} missing values")
-                    print(f"    First missing: {missing_rows['date'].iloc[0].date()}")
-                    print(f"    Last missing:  {missing_rows['date'].iloc[-1].date()}")
-                else:
-                    print(f"  {col}: ✓ Complete")
-
-    def save_data(self, df: pd.DataFrame, filename: str, subfolder: str = 'raw') -> str:
+    def save_data(self, df: pd.DataFrame, filename: str, subfolder: str = 'processed') -> str:
         """Save data to CSV file."""
         output_path = os.path.join('data', subfolder, filename)
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
@@ -247,32 +190,30 @@ class FREDDataCollector:
 
 
 def main():
-    """Main execution: collect, clean, and save data."""
-    load_dotenv()
-    API_KEY = os.getenv('FRED_API_KEY')
-    
-    if API_KEY is None:
-        raise ValueError(
-            "FRED_API_KEY not found in .env file. "
-            "Create .env file in project root with: FRED_API_KEY=your_key_here"
-        )
+    """Main execution: load, clean, and save data from local CSV files."""
     
     print("\n" + "="*70)
-    print("PHILLIPS CURVE ML PROJECT - DATA COLLECTION (2015-2025)")
+    print("PHILLIPS CURVE ML PROJECT - DATA COLLECTION (LOCAL CSV VERSION)")
     print("="*70)
-    print("\n✓ Initializing FRED API connection...")
+    print("\nℹ️  This version loads pre-downloaded data from CSV files.")
+    print("   No API key required!\n")
     
-    collector = FREDDataCollector(api_key=API_KEY)
+    print("✓ Initializing data loader...")
     
-    print("\n✓ Fetching data from FRED...")
-    df_raw = collector.fetch_all_countries(start_date='2015-01-01')
+    loader = LocalDataLoader(raw_data_folder='data/raw')
+    
+    print("\n✓ Loading data from local CSV files...")
+    df_raw = loader.load_all_countries()
+    
+    print(f"\n  Loaded {len(df_raw)} rows")
+    print(f"  Countries: {sorted(df_raw['country'].unique())}")
     
     print("\n✓ Cleaning and aligning data...")
-    df_clean = collector.clean_and_filter_data(df_raw)
+    df_clean = loader.clean_and_filter_data(df_raw)
     
-    print("\n✓ Saving data...")
-    collector.save_data(df_raw, 'raw_data.csv', subfolder='raw')
-    collector.save_data(df_clean, 'processed_data.csv', subfolder='processed')
+    print("\n✓ Saving processed data...")
+    loader.save_data(df_raw, 'raw_data.csv', subfolder='raw')
+    loader.save_data(df_clean, 'processed_data.csv', subfolder='processed')
     
     print("\n" + "="*70)
     print("DATA COLLECTION COMPLETE!")
@@ -280,7 +221,7 @@ def main():
     print(f"\nNext steps:")
     print(f"  1. Review: data/processed/processed_data.csv")
     print(f"  2. Run: Feature engineering (feature_engineering.py)")
-    print(f"  3. Run: ML models training (models_country_comparison.py)")
+    print(f"  3. Run: ML models training (models.py)")
     print("\n")
     
     return df_clean
@@ -288,3 +229,4 @@ def main():
 
 if __name__ == "__main__":
     df = main()
+

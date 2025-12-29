@@ -210,11 +210,11 @@ class CountryComparisonVisualizer:
         # Data from your results
         regime_data = {
             'UK': {
-                'Pre-COVID': {'mean': 1.90, 'std': 0.65},
+                'Pre-COVID': {'mean': 1.62, 'std': 0.84},
                 'Post-COVID': {'mean': 4.38, 'std': 2.88}
             },
             'US': {
-                'Pre-COVID': {'mean': 1.93, 'std': 0.54},
+                'Pre-COVID': {'mean': 1.61, 'std': 0.86},
                 'Post-COVID': {'mean': 4.22, 'std': 2.48}
             }
         }

@@ -53,11 +53,5 @@ def main():
     print("\n")
 
 if __name__ == "__main__":
-    # Check for FRED API key
-    api_key = os.getenv('FRED_API_KEY')
-    if not api_key:
-        print("ERROR: FRED_API_KEY not found in .env file")
-        print("Create .env file with: FRED_API_KEY=your_key_here")
-        sys.exit(1)
     
     main()
